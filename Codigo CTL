@@ -1,0 +1,85 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Cargar el archivo CSV
+df = pd.read_csv('marvinblocks.csv', header=None, sep=';')
+
+# Asignar nombres de columnas a df
+df.columns = ['ID', 'X', 'Y', 'Z', 'Ton', 'Au [ppm]', 'Cu[%]', 'Profit']
+
+# Crear límites
+lower_limit = np.arange(0, 1.46 + 0.073, 0.073)
+upper_limit = np.arange(0.073, 1.46 + 0.073, 0.073)
+
+# Ajuste para que los límites tengan el mismo largo
+if len(lower_limit) != len(upper_limit):
+    upper_limit = np.append(upper_limit, 1.46)
+class_mark = (lower_limit + upper_limit) / 2
+
+# Crear un nuevo DataFrame con los límites y la marca de clase
+limits_table = pd.DataFrame({
+    'lowerlimit': lower_limit,
+    'upperlimit': upper_limit,
+    'classmark': class_mark
+})
+
+# Adjuntar los tonelajes acumulados
+limits_table['accumulatedtonnage'] = limits_table.apply(
+    lambda row: df[df['Cu[%]'] > row['lowerlimit']]['Ton'].sum(), axis=1
+)
+
+# Agregar el tonelaje marginal
+limits_table['marginaltonnage'] = limits_table['accumulatedtonnage'].shift(1) - limits_table['accumulatedtonnage']
+
+# Agregar la ley media
+limits_table['averagegrade'] = limits_table.apply(
+    lambda row: (limits_table['classmark'][:row.name + 1] * limits_table['marginaltonnage'][:row.name + 1]).sum() /
+                limits_table['marginaltonnage'][:row.name + 1].sum(), axis=1
+)
+
+print(limits_table)
+
+# Graficar los datos
+fig, ax1 = plt.subplots(figsize=(10, 6))
+
+# Línea del Tonelaje acumulado
+line1, = ax1.plot(
+    limits_table['lowerlimit'], 
+    limits_table['accumulatedtonnage'], 
+    label='Tonelaje', 
+    color='green', 
+    marker='x'
+)
+ax1.set_xlabel('Ley de Corte [%]')  # Etiqueta del eje X
+ax1.set_ylabel('Tonelaje', color='green')  # Etiqueta del eje Y izquierdo
+ax1.tick_params(axis='y', labelcolor='green')
+
+# Línea de la Ley media
+ax2 = ax1.twinx()  # Crear un segundo eje Y
+line2, = ax2.plot(
+    limits_table['lowerlimit'], 
+    limits_table['averagegrade'], 
+    label='Ley media', 
+    color='blue', 
+    marker='o'
+)
+ax2.set_ylabel('Ley Media [%]', color='blue')  # Etiqueta del eje Y derecho
+ax2.tick_params(axis='y', labelcolor='blue')
+
+# Título del gráfico
+plt.title('Curva Tonelaje Ley Cu')
+
+# Crear leyenda combinada y posicionarla en la esquina superior izquierda
+lines = [line1, line2]
+labels = [line.get_label() for line in lines]
+plt.legend(lines, labels, loc='upper left', bbox_to_anchor=(0.05, 0.95))  # Ajustar la posición de la leyenda
+
+# Ajustar el layout para evitar solapamiento
+fig.tight_layout()
+
+# Mostrar la cuadrícula y el gráfico
+plt.grid(True)
+plt.show()
+
+
