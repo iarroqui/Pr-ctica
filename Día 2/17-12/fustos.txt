@@ -1,0 +1,126 @@
+# conjunto de ejemplo con centroides
+bloques=expand.grid(xb=seq(0,100,by=5),
+                    yb=seq(0,100,by=5),
+                    zb=seq(0,100,by=5))
+ 
+# simular ley de ejemplo en el bloque
+bloques$ley=runif(nrow(bloques),0,1)
+ 
+# funcion para rebloqueo
+rebloqueo=function(bloques, dimension){
+  # calcular la extension del modelo inicial
+  new.bloques=expand.grid(xnew=seq(min(bloques[,1]),
+                                   max(bloques[,1]),
+                                   by=dimension[1]),
+                          ynew=seq(min(bloques[,1]),
+                                   max(bloques[,1]),
+                                   by=dimension[1]),
+                          znew=seq(min(bloques[,1]),
+                                   max(bloques[,1]),
+                                   by=dimension[1]))
+  # calcular las leyes de los nuevos bloques
+  ley_nueva=c()
+  for(ii in 1:nrow(new.bloques)){
+    # tomar un bloque nuevo
+    new.loc=new.bloques[ii,]
+    # calcular los bloques originales cercanos a ese bloque nuevo
+    distancias=sqrt(rowSums((as.matrix(bloques[,1:3])-matrix(rep(as.numeric(new.loc),nrow(bloques)),nrow(bloques),3,byrow=T))**2))
+    cercanos=bloques[distancias<=min(dimension)*0.5,]
+    # calcular la ley del nuevo bloque
+    distancias_cercanos=as.numeric(sqrt(rowSums((cercanos[,1:3]-matrix(rep(as.numeric(new.loc),nrow(cercanos)),nrow(cercanos),3,byrow=T))**2)))
+    if(sum(distancias_cercanos==0)!=0){
+      # esto es si hay un bloque original que coincide con el nuevo
+      ley_nueva[ii]=cercanos$ley[distancias_cercanos==0]
+    }else{
+      # esto es para hacer una ley promedio (inverso de la distancia)
+      ley_nueva[ii]==sum(1/distancias_cercanos*cercanos$ley/sum(1/distancias_cercanos))
+    }
+  }
+  # return
+  return(cbind(new.bloques,ley_nueva))
+}
+ 
+# ejemplo, bloques de 10x10x10
+dimension=c(10,20,10)
+resultado=rebloqueo(bloques,dimension)
+ 
+# graficar los nuevos bloques
+plot(bloques[,1:2],col="red",asp=1)
+points(resultado[,1:2],asp=1,col="blue");grid()
+
+ 
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+ 
+# Crear conjunto de ejemplo con centroides
+xb = np.arange(0, 101, 5)
+yb = np.arange(0, 101, 5)
+zb = np.arange(0, 101, 5)
+bloques = pd.DataFrame(np.array(np.meshgrid(xb, yb, zb)).T.reshape(-1, 3), columns=['xb', 'yb', 'zb'])
+ 
+# Simular ley de ejemplo en el bloque
+bloques['ley'] = np.random.uniform(0, 1, size=len(bloques))
+ 
+# Función para rebloqueo
+def rebloqueo(bloques, dimension):
+    # Calcular la extensión del modelo inicial
+    xnew = np.arange(bloques['xb'].min(), bloques['xb'].max() + 1, dimension[0])
+    ynew = np.arange(bloques['yb'].min(), bloques['yb'].max() + 1, dimension[1])
+    znew = np.arange(bloques['zb'].min(), bloques['zb'].max() + 1, dimension[2])
+    new_bloques = pd.DataFrame(np.array(np.meshgrid(xnew, ynew, znew)).T.reshape(-1, 3), columns=['xnew', 'ynew', 'znew'])
+ 
+    # Calcular las leyes de los nuevos bloques
+    ley_nueva = []
+    for _, new_loc in new_bloques.iterrows():
+        # Calcular los bloques originales cercanos a ese bloque nuevo
+        distancias = np.sqrt(np.sum((bloques[['xb', 'yb', 'zb']].values - new_loc.values) ** 2, axis=1))
+        cercanos = bloques[distancias <= np.min(dimension) * 0.5]
+ 
+        if len(cercanos) > 0:
+            # Calcular las distancias de los bloques cercanos
+            distancias_cercanos = np.sqrt(np.sum((cercanos[['xb', 'yb', 'zb']].values - new_loc.values) ** 2, axis=1))
+ 
+            if np.sum(distancias_cercanos == 0) != 0:
+                # Si hay un bloque original que coincide con el nuevo
+                ley_nueva.append(cercanos.loc[distancias_cercanos == 0, 'ley'].values[0])
+            else:
+                # Calcular la ley promedio (inverso de la distancia)
+                ley_nueva.append(np.sum((1 / distancias_cercanos) * cercanos['ley'] / np.sum(1 / distancias_cercanos)))
+        else:
+            ley_nueva.append(np.nan)
+ 
+    new_bloques['ley_nueva'] = ley_nueva
+ 
+    return new_bloques
+ 
+# Ejemplo, bloques de 10x20x10
+dimension = [10, 20, 10]
+resultado = rebloqueo(bloques, dimension)
+ 
+# Graficar los nuevos bloques
+plt.scatter(bloques['xb'], bloques['yb'], color='red', label='Original Blocks')
+plt.scatter(resultado['xnew'], resultado['ynew'], color='blue', label='New Blocks')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+ 
+ 
+
+
+
+
+
+
+#aca va otro que es para eliminar la parte superior de la matriz
+# numero de datos
+n=5
+# datos
+A=matrix(1:(n*n),n,n)
+# vectores
+for (ii in 1:(n * (n - 1) / 2)) {
+  fila = ceiling((sqrt(1 + 8 * ii) - 1) / 2) + 1
+  columna = ii - ((fila - 2) * (fila - 1)) / 2
+  print(c(fila,columna))
+}

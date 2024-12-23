@@ -1,0 +1,58 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Importar el modelo de bloques:
+block_model = pd.read_csv('marvinblocks', sep=';')
+#Defino los nombres de las columnas del modelo de bloques
+block_model.columns = ['ID', 'X', 'Y', 'Z', 'TON', 'Au[ppm]', 'Cu[%]', 'Profit']
+
+# Definir las leyes de corte:
+# gvivero: agregar mínimo y máximo del modelo de forma automática
+minimum_cu = block_model['cu'].min()
+maximun_cu = block_model['cu'].max()
+# gvivero: construir el vector de forma automática con numpy (np.arange)
+cutoff_grade = [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4]
+
+# Calcular el cobre fino:
+block_model['fines'] = block_model['cu'] / 100 * block_model['tonn']
+
+# Tonelajes y finos totales:
+# gvivero: dejar todo definido como vectores
+cum_tonnage = []
+mean_grade = []
+
+for gc in cutoff_grade:
+    
+    # Calcular el tonelaje y finos:
+    tonnage = block_model['tonn'][block_model['cu'] >= gc].sum()
+    fines = block_model['fines'][block_model['cu'] > gc].sum()
+
+    # Guardar tonelajes y leyes calculadas:
+    cum_tonnage.append(tonnage)
+    mean_grade.append(fines / tonnage * 100)
+
+
+
+
+
+
+
+
+
+# Graficar la curva tonalaje-ley:
+fig, ax_tonn = plt.subplots()
+plt.title('Curva tonelaje-ley')
+
+ax_tonn.set_xlabel('Ley de corte de Cu [%]')
+ax_tonn.set_ylabel('Tonelaje acumulado [ton]')
+line_1, = ax_tonn.plot(cutoff_grade, cum_tonnage, 'r', label='tonnage')
+
+ax_grade = ax_tonn.twinx()
+ax_grade.set_ylabel('Ley media de Cu [%]')
+line_2, = ax_grade.plot(cutoff_grade, mean_grade, 'g', label='grade')
+
+lines = [line_1, line_2]
+labels = [line.get_label() for line in lines]
+ax_tonn.legend(lines, labels, loc='upper right')
+
+plt.show()

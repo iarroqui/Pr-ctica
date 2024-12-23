@@ -1,0 +1,44 @@
+def rebloquear_bloques_ponderado(df, dx, dy, dz, nuevo_dx, nuevo_dy, nuevo_dz):
+    """
+    Realiza el rebloqueo calculando intersecciones y ponderaciones cuando los bloques no son múltiplos exactos.
+    Optimizado para grandes bases de datos.
+    """
+    columnas_propiedades = df.columns.difference(["x", "y", "z"])
+    centros_originales = df[["x", "y", "z"]].values
+    dimensiones_originales = np.array([dx, dy, dz])
+
+    # Generar las coordenadas de los centros de los nuevos bloques de manera vectorizada
+    x_coords = np.arange(df["x"].min() - dx, df["x"].max() + dx, nuevo_dx) + nuevo_dx / 2
+    y_coords = np.arange(df["y"].min() - dy, df["y"].max() + dy, nuevo_dy) + nuevo_dy / 2
+    z_coords = np.arange(df["z"].min() - dz, df["z"].max() + dz, nuevo_dz) + nuevo_dz / 2
+    grid = np.array(np.meshgrid(x_coords, y_coords, z_coords, indexing="ij")).reshape(3, -1).T
+
+    # Precalcular dimensiones de los nuevos bloques
+    dimensiones_nuevo = np.array([nuevo_dx, nuevo_dy, nuevo_dz])
+
+    nuevos_bloques = []
+    for nuevo_centro in grid:
+        # Calcular proporciones de intersección de manera vectorizada
+        proporciones = calcular_intersecciones_numpy(
+            centros_originales, 
+            np.tile(dimensiones_originales, (centros_originales.shape[0], 1)),
+            nuevo_centro, 
+            dimensiones_nuevo
+        )
+        indices_relevantes = np.where(proporciones > 0)[0]
+
+        if len(indices_relevantes) == 0:
+            continue
+
+        # Calcular propiedades ponderadas de manera vectorizada
+        suma_pesos = np.sum(proporciones[indices_relevantes])
+        propiedades_ponderadas = {
+            col: np.dot(df.iloc[indices_relevantes][col].values, proporciones[indices_relevantes]) / suma_pesos
+            for col in columnas_propiedades
+        }
+
+        # Agregar nuevo bloque con coordenadas y propiedades calculadas
+        propiedades_ponderadas.update({"x": nuevo_centro[0], "y": nuevo_centro[1], "z": nuevo_centro[2]})
+        nuevos_bloques.append(propiedades_ponderadas)
+
+    return pd.DataFrame(nuevos_bloques)
